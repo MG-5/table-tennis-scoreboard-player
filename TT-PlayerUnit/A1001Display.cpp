@@ -8,13 +8,12 @@
 
 #define DELAY 5
 
-//
 //      A
 //     ---
-//  F |   | B    P - Punkt
+//  F |   | B
 //     -G-
 //  E |   | C
-//     ---
+//     ---     P - Punkt
 //      D
 
 const uint8_t digitToSegment[] = {
@@ -39,26 +38,13 @@ const uint8_t digitToSegment[] = {
 
 void A1001Display::initDisplay()
 {
+  // USI - https://playground.arduino.cc/Code/USI-SPI
 
-  // https://playground.arduino.cc/Code/USI-SPI
-
-  // USI
-  //set control pins as outputs and low
-  DDRB|=(DATA|CLOCK);
-  DDRD|=(STORE|MASTER_RESET);
-  PORTB &= ~(DATA|CLOCK);
-  PORTD &= ~(STORE|MASTER_RESET);
-   
-
-
-  // SPI
-  /*
-          SHIFT_REGISTER |= (DATA | STORE_PIN_P1 | CLOCK);	//Set control pins as outputs
-          SHIFT_PORT &= ~(DATA | STORE_PIN_P1 | CLOCK);		//Set control pins low
-
-          SPI_CONTROL = (1 << SPE) | (1 << MSTR);	//Start SPI as Master
-          SPSR |= 1;
-  */
+  // set control pins as outputs and low
+  DDRB |= (DATA | CLOCK);
+  DDRD |= (STORE | MASTER_RESET);
+  PORTB &= ~(DATA | CLOCK);
+  PORTD &= ~(STORE | MASTER_RESET);
 }
 /*
 void A1001Display::startupSequence()
@@ -115,83 +101,36 @@ _delay_ms(500);
 */
 void A1001Display::update(uint8_t currentDigit)
 {
-  DIGIT_PORT &= 0b0000; // alle 4 digits abschalten
+  DIGIT_PORT &= 0b00000; // alle 4 digits + DP abschalten
 
-  SHIFT_PORT &= ~STORE_PIN_P1;
-  SHIFT_PORT &= ~STORE_PIN_P2;
+  STORE_PORT &= ~STORE;
+  _sendByte(_digit[currentDigit]);
+  STORE_PORT |= STORE;
 
-  // Player1 display
-  sendByte(_digit_playerOne[currentDigit]);
-  SHIFT_PORT |= STORE_PIN_P1;
-  SHIFT_PORT &= ~STORE_PIN_P1;
-
-  // Player2 display
-  sendByte(_digit_playerTwo[currentDigit]);
-  SHIFT_PORT |= STORE_PIN_P2;
-  SHIFT_PORT &= ~STORE_PIN_P2;
+  uint8_t reg = (1 << currentDigit);
 
   // Doppelpunkt einbauen
-  if (currentDigit == 1)
-  {
-    if (_digit_playerOne[4] == true)
-    {
-      SHIFT_PORT |= (1 << DP_PIN_P1);
-    }
-    else
-    {
-      SHIFT_PORT &= ~(1 << DP_PIN_P1);
-    }
-
-    if (_digit_playerTwo[4] == true)
-    {
-      SHIFT_PORT |= (1 << DP_PIN_P2);
-    }
-    else
-    {
-      SHIFT_PORT &= ~(1 << DP_PIN_P2);
-    }
-  }
+  if (currentDigit == 1 && _digit[4])
+    reg |= DP_PIN;
 
   // digit einschalten
-  DIGIT_PORT |= (1 << currentDigit);
+  DIGIT_PORT |= reg;
 }
 
-void A1001Display::tick(uint32_t now)
+void A1001Display::_sendByte(uint8_t shiftByte)
 {
+  USIDR = shiftByte;
+  USISR = (1 << USIOIF); // clear flag
 
-  // if(!true)
-  //{
-  // sendByte(0);
-  // sendByte(~0);
-
-  // SHIFT_PORT |= STORE;
-  // SHIFT_PORT &= ~STORE;
-
-  //_delay_ms(DELAY);
-
-  //}
-
-  if (textIsRunning)
-  {
-    if ((now - prevTime) >= _speed)
-    {
-      prevTime = now;
-      _runningText();
-    }
-  }
+  while (!(USISR & (1 << USIOIF)))
+    USICR = ((1 << USIWM0) | (1 << USICS1) | (1 << USICLK) | (1 << USITC));
 }
 
-void A1001Display::sendByte(uint8_t shiftByte)
-{
-  SPDR = shiftByte; // data
-  while (!(SPSR & (1 << SPIF)))
-    ; // Wait for SPI process to finish
-}
-
-uint8_t[] A1001Display::scoreline_format(uint8_t firstPlayer, uint8_t secondPlayer)
+uint8_t *A1001Display::scoreline_format(uint8_t firstPlayer, uint8_t secondPlayer)
 {
   uint8_t players[2] = {firstPlayer, secondPlayer};
   uint8_t score[4] = {0, 0, 0, 0};
+
   for (uint8_t i = 0; i <= 1; i++)
   {
     if (players[i] > 9)
@@ -213,15 +152,12 @@ uint8_t[] A1001Display::scoreline_format(uint8_t firstPlayer, uint8_t secondPlay
       }
     }
   }
-
   return score;
 }
 
-void A1001Display::showScoreline_playerOne()
+void A1001Display::showScoreline()
 {
-  setSegments_playerOne()
-
-      uint8_t players[2] = {_score_playerOne, _score_playerTwo};
+  uint8_t players[2] = {_score_myself, _score_other};
   uint8_t score[4] = {0, 0, 0, 0};
   for (uint8_t i = 0; i <= 1; i++)
   {
@@ -244,68 +180,37 @@ void A1001Display::showScoreline_playerOne()
       }
     }
   }
-  setSegments_playerOne(true, score[0], score[1], score[2], score[3]);
-}
-
-void A1001Display::showScoreline_playerTwo()
-{
-  uint8_t players[] = {_score_playerTwo, _score_playerOne};
-  uint8_t score[] = {0, 0, 0, 0};
-  for (uint8_t i = 0; i <= 1; i++)
-  {
-    if (players[i] > 9)
-    {
-      score[2 * i] = digitToSegment[players[i] / 10];
-      score[2 * i + 1] = digitToSegment[players[i] % 10];
-    }
-    else if (players[i] <= 9)
-    {
-      if (i == 1)
-      {
-        score[2 * i] = digitToSegment[players[i]];
-        score[2 * i + 1] = 0;
-      }
-      else
-      {
-        score[2 * i] = 0;
-        score[2 * i + 1] = digitToSegment[players[i]];
-      }
-    }
-  }
-  setSegments_playerOne(true, score[0], score[1], score[2], score[3]);
+  setSegments(true, score[0], score[1], score[2], score[3]);
 }
 
 void A1001Display::showServes(uint8_t serves)
 {
-  setSegments_playerOne(true, 0, digitToSegment[0xA], 0, digitToSegment[serves]);
+  setSegments(true, 0, digitToSegment[0xA], 0, digitToSegment[serves]);
 }
 
-void A1001Display::setBrightness(uint8_t brightness) { _brightness = brightness; }
-void A1001Display::setSegments_playerOne(const bool doublepoint, const uint8_t digits[5])
+void A1001Display::setBrightness(uint8_t brightness)
 {
-  setSegments_playerOne(doublepoint, digits[0], digits[1], digits[2], digits[3]);
+  _brightness = brightness;
+}
+void A1001Display::setSegments(const bool doublepoint, const uint8_t digits[4])
+{
+  setSegments(doublepoint, digits[0], digits[1], digits[2], digits[3]);
 }
 
-void A1001Display::setSegments_playerOne(const bool doublepoint, const uint8_t firstDigit, const uint8_t secondDigit,
-                                         const uint8_t thirdDigit, const uint8_t forthDigit)
+void A1001Display::setSegments(const bool doublepoint, const uint8_t firstDigit, const uint8_t secondDigit,
+                               const uint8_t thirdDigit, const uint8_t forthDigit)
 {
-  if (doublepoint)
-    _digit_playerOne[4] = true;
-  else
-    _digit_playerOne[4] = false;
-
-  _digit_playerOne[0] = firstDigit;
-  _digit_playerOne[1] = secondDigit;
-  _digit_playerOne[2] = thirdDigit;
-  _digit_playerOne[3] = forthDigit;
+  _digit[0] = firstDigit;
+  _digit[1] = secondDigit;
+  _digit[2] = thirdDigit;
+  _digit[3] = forthDigit;
+  _digit[4] = doublepoint;
 }
 
 void A1001Display::runningText(const uint8_t text[MAX_VALUE], uint16_t speed)
 {
   for (int i = 0; i <= 5; i++)
-  {
     _text[i] = text[i];
-  }
 
   _speed = speed;
   textLength = MAX_VALUE;
@@ -331,10 +236,30 @@ void A1001Display::_runningText()
     letter[3] = 0;
   }
   else
-  {
     textIsRunning = false;
-  }
 
-  setSegments_playerOne(false, letter[0], letter[1], letter[2], letter[3]);
+  setSegments(false, letter[0], letter[1], letter[2], letter[3]);
   counter1++;
+}
+
+void A1001Display::tick(uint32_t now)
+{
+
+  // if(!true)
+  //{
+  // sendByte(0);
+  // sendByte(~0);
+
+  // SHIFT_PORT |= STORE;
+  // SHIFT_PORT &= ~STORE;
+
+  //_delay_ms(DELAY);
+
+  //}
+
+  if (textIsRunning && (now - prevTime) >= _speed)
+  {
+    prevTime = now;
+    _runningText();
+  }
 }
