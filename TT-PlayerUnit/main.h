@@ -3,7 +3,10 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
-//#include "Adafruit-1001-Display/A1001Display.h"
+#include "A1001Display.h"
+#include "settings.h"
 #include "timer0.h"
 #include "uart.h"
-#include "settings.h"
+
+uint8_t score_myself = 0;
+uint8_t score_other = 0;

@@ -1,5 +1,4 @@
-#ifndef UART_H
-#define UART_H
+#pragma once
 /************************************************************************
 Title:    Interrupt UART library with receive/transmit circular buffers
 Author:   Peter Fleury <pfleury@gmx.ch>  http://tinyurl.com/peterfleury
@@ -201,5 +200,3 @@ extern void uart1_puts_p(const char *s);
 #define uart1_puts_P(__s) uart1_puts_p(PSTR(__s))
 
 /**@}*/
-
-#endif // UART_H

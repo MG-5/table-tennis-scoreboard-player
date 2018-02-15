@@ -1,8 +1,38 @@
-#ifndef __A1001DISPLAY__
-#define __A1001DISPLAY__
+#pragma once
 
 #include "settings.h"
 #include <stdint.h>
+#include <avr/io.h>
+#include <util/delay.h>
+#include "timer0.h"
+
+//      A
+//     ---
+//  F |   | B
+//     -G-
+//  E |   | C
+//     ---     P - Punkt
+//      D
+
+const uint8_t digitToSegment[] = {
+    // 0bPGFEDCBA
+    0b00111111, // 0
+    0b00000110, // 1
+    0b01011011, // 2
+    0b01001111, // 3
+    0b01100110, // 4
+    0b01101101, // 5
+    0b01111101, // 6
+    0b00000111, // 7
+    0b01111111, // 8
+    0b01101111, // 9
+    0b01110111, // A
+    0b01111100, // b
+    0b00111001, // C
+    0b01011110, // d
+    0b01111001, // E
+    0b01110001  // F
+};
 
 class A1001Display
 {
@@ -14,18 +44,21 @@ public:
   //! Sets the brightness of the display.
   //!
   //! @param brightness A number from 0 (lowes brightness) to 255 (highest brightness)
-  void setBrightness(uint8_t brightness);
 
   //! Refresh display
   void update(uint8_t currentDigit);
 
+  void updateAllDigits();
+
   void tick(uint32_t now);
 
-  void showScoreline();
+  void resetOnce();
 
-  uint8_t *scoreline_format(uint8_t firstPlayer, uint8_t secondPlayer);
+  void turnOffDigits();
 
-  void showServes(uint8_t serves = 0);
+  void showScoreline(uint8_t left, uint8_t right);
+
+  void showServes(uint8_t serves, bool myself);
 
   void runningText(const uint8_t text[], uint16_t speed);
 
@@ -42,14 +75,11 @@ public:
   //! @param digit2 - third digit
   //! @param digit3 - fourth digit
   //! @param doublepoint - show doublepoint or not
-  void setSegments(const bool doublepoint, const uint8_t firstDigit, const uint8_t secondDigit,
-                   const uint8_t thirdDigit, const uint8_t forthDigit);
+  void setSegments(const bool doublepoint, const uint8_t firstDigit=0, const uint8_t secondDigit=0,
+                   const uint8_t thirdDigit=0, const uint8_t forthDigit=0);
 
 private:
-  uint8_t _score_myself;
-  uint8_t _score_other;
-  uint8_t _brightness;
-  uint8_t _digit[5];
+  uint8_t _digit[5]={0,0,0,0,0};
   uint8_t letter[4];
   uint8_t textLength;
   uint8_t counter1;
@@ -62,5 +92,3 @@ private:
 
   void _sendByte(uint8_t shiftByte);
 };
-
-#endif // __A1001DISPLAY__

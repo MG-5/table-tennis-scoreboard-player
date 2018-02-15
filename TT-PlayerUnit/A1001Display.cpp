@@ -1,40 +1,9 @@
 
 #include "A1001Display.h"
-#include <avr/io.h>
-#include <stdint.h>
-#include <util/delay.h>
 
 #define MAX_VALUE 5 // HALLO -> 5
 
 #define DELAY 5
-
-//      A
-//     ---
-//  F |   | B
-//     -G-
-//  E |   | C
-//     ---     P - Punkt
-//      D
-
-const uint8_t digitToSegment[] = {
-    // 0bPGFEDCBA
-    0b00111111, // 0
-    0b00000110, // 1
-    0b01011011, // 2
-    0b01001111, // 3
-    0b01100110, // 4
-    0b01101101, // 5
-    0b01111101, // 6
-    0b00000111, // 7
-    0b01111111, // 8
-    0b01101111, // 9
-    0b01110111, // A
-    0b01111100, // b
-    0b00111001, // C
-    0b01011110, // d
-    0b01111001, // E
-    0b01110001  // F
-};
 
 void A1001Display::initDisplay()
 {
@@ -46,62 +15,62 @@ void A1001Display::initDisplay()
   PORTB &= ~(DATA | CLOCK);
   PORTD &= ~(STORE | MASTER_RESET);
 }
-/*
+
 void A1001Display::startupSequence()
 {
-uint8_t secondShiftByte = 1;
+    uint8_t segment = 1;
+    const uint8_t timePassed = 125;
+    const uint8_t sequence[7] = {66, 67, 99, 115, 123, 127, 255};
+    uint32_t prevTime2 = millis();
+    uint8_t i = 0;
 
-for (uint8_t i = 0; i <= 5; i++)
-{
-uint8_t firstShiftByte = ~(0b11110);
+    while (i <= 6)
+    {
+      setSegments(false, segment);
 
-SHIFT_PORT &= ~STORE_PIN_P1;
+      updateAllDigits();
+      _delay_us(100);
 
-sendByte(secondShiftByte);
-sendByte(firstShiftByte);
+	  turnOffDigits();
+	  _delay_us(300);
 
-SHIFT_PORT |= STORE_PIN_P1;
-SHIFT_PORT &= ~STORE_PIN_P1;
+      if (millis() - prevTime2 >= timePassed)
+      {
+        segment <<= 1;
+        i++;
+        prevTime2 = millis();
+      }
+    }
 
-secondShiftByte = (secondShiftByte << 1);
+	i=0;
+    while (i <= 6)
+    {
+      segment = sequence[i];
 
-_delay_ms(150);
+      if (i == 6)
+        setSegments(true, segment);
+      else
+        setSegments(false, segment);
+
+      updateAllDigits();
+      _delay_us(100);
+
+      turnOffDigits();
+      _delay_us(300);
+
+      if (millis() - prevTime2 >= timePassed)
+      {
+        i++;
+        prevTime2 = millis();
+      }
+    }
+	resetOnce();
 }
 
-secondShiftByte = 1;
-for (int i = 0; i <= 7; i++)
-{
-
-uint8_t firstShiftByte = ~(0b11110);
-
-if (i == 7)
-firstShiftByte = ~(0b11111);
-
-SHIFT_PORT &= ~STORE_PIN_P1;
-
-sendByte(secondShiftByte);
-sendByte(firstShiftByte);
-
-SHIFT_PORT |= STORE_PIN_P1;
-SHIFT_PORT &= ~STORE_PIN_P1;
-
-secondShiftByte = (secondShiftByte << 1);
-
-_delay_ms(150);
-}
-
-sendByte(0);
-sendByte(~0);
-
-SHIFT_PORT |= STORE_PIN_P1;
-SHIFT_PORT &= ~STORE_PIN_P1;
-
-_delay_ms(500);
-}
-*/
 void A1001Display::update(uint8_t currentDigit)
 {
-  DIGIT_PORT &= 0b00000; // alle 4 digits + DP abschalten
+  // currentDigit is binary
+  turnOffDigits();
 
   STORE_PORT &= ~STORE;
   _sendByte(_digit[currentDigit]);
@@ -117,6 +86,36 @@ void A1001Display::update(uint8_t currentDigit)
   DIGIT_PORT |= reg;
 }
 
+void A1001Display::updateAllDigits()
+{
+  // currentDigit is binary
+  turnOffDigits();
+
+  STORE_PORT &= ~STORE;
+  _sendByte(_digit[0]);
+  STORE_PORT |= STORE;
+
+  uint8_t reg = 0b1111;
+
+  // Doppelpunkt einbauen
+  if (_digit[4])
+    reg |= DP_PIN;
+
+  // digit einschalten
+  DIGIT_PORT |= reg;
+}
+
+void A1001Display::resetOnce()
+{
+  PORTD &= ~MASTER_RESET;
+  PORTD |= MASTER_RESET;
+}
+
+void A1001Display::turnOffDigits()
+{
+  DIGIT_PORT &= 0b00000; // alle 4 digits + DP abschalten
+}
+
 void A1001Display::_sendByte(uint8_t shiftByte)
 {
   USIDR = shiftByte;
@@ -126,39 +125,11 @@ void A1001Display::_sendByte(uint8_t shiftByte)
     USICR = ((1 << USIWM0) | (1 << USICS1) | (1 << USICLK) | (1 << USITC));
 }
 
-uint8_t *A1001Display::scoreline_format(uint8_t firstPlayer, uint8_t secondPlayer)
+void A1001Display::showScoreline(uint8_t left, uint8_t right)
 {
-  uint8_t players[2] = {firstPlayer, secondPlayer};
+  uint8_t players[2] = {left, right};
   uint8_t score[4] = {0, 0, 0, 0};
 
-  for (uint8_t i = 0; i <= 1; i++)
-  {
-    if (players[i] > 9)
-    {
-      score[2 * i] = digitToSegment[players[i] / 10];
-      score[2 * i + 1] = digitToSegment[players[i] % 10];
-    }
-    else if (players[i] <= 9)
-    {
-      if (i == 1)
-      {
-        score[2 * i] = digitToSegment[players[i]];
-        score[2 * i + 1] = 0;
-      }
-      else
-      {
-        score[2 * i] = 0;
-        score[2 * i + 1] = digitToSegment[players[i]];
-      }
-    }
-  }
-  return score;
-}
-
-void A1001Display::showScoreline()
-{
-  uint8_t players[2] = {_score_myself, _score_other};
-  uint8_t score[4] = {0, 0, 0, 0};
   for (uint8_t i = 0; i <= 1; i++)
   {
     if (players[i] > 9)
@@ -183,15 +154,15 @@ void A1001Display::showScoreline()
   setSegments(true, score[0], score[1], score[2], score[3]);
 }
 
-void A1001Display::showServes(uint8_t serves)
+void A1001Display::showServes(uint8_t serves, bool myself)
 {
-  setSegments(true, 0, digitToSegment[0xA], 0, digitToSegment[serves]);
+  uint8_t sign = 0;
+  if (!myself)
+    sign = 64; // Minusstrich
+
+  setSegments(true, 0, digitToSegment[0xA], sign, digitToSegment[serves]);
 }
 
-void A1001Display::setBrightness(uint8_t brightness)
-{
-  _brightness = brightness;
-}
 void A1001Display::setSegments(const bool doublepoint, const uint8_t digits[4])
 {
   setSegments(doublepoint, digits[0], digits[1], digits[2], digits[3]);
