@@ -2,6 +2,7 @@
 
 #include <avr/interrupt.h>
 #include <avr/io.h>
+#include <util/delay.h>
 
 #include "A1001Display.h"
 #include "settings.h"

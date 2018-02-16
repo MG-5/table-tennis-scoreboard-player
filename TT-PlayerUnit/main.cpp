@@ -1,5 +1,4 @@
 #include "main.h"
-#include <avr/delay.h>
 
 uint32_t counts = 0;
 bool test = false;
@@ -15,7 +14,7 @@ int main(void)
 
   sei();
 
- display.startupSequence();
+  display.startupSequence();
 
   while (1)
   {
@@ -36,9 +35,9 @@ int main(void)
     score_myself = 21;
     score_other = 19;
 
-    //display.showScoreline(score_myself, score_other);
+    // display.showScoreline(score_myself, score_other);
 
-display.setSegments(false,0,0,0,0);
+    display.setSegments(false, 0, 0, 0, 0);
 
     for (uint8_t i = 0; i <= 3; i++)
     {
