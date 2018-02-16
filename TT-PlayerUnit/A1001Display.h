@@ -1,10 +1,10 @@
 #pragma once
 
 #include "settings.h"
-#include <stdint.h>
-#include <avr/io.h>
-#include <util/delay.h>
 #include "timer0.h"
+#include <avr/io.h>
+#include <stdint.h>
+#include <util/delay.h>
 
 //      A
 //     ---
@@ -60,35 +60,18 @@ public:
 
   void showServes(uint8_t serves, bool myself);
 
-  void runningText(const uint8_t text[], uint16_t speed);
-
   void startupSequence();
-
-  bool textIsRunning = false;
 
   void setSegments(const bool doublepoint, const uint8_t digits[4]);
 
   //! Display arbitrary data on the module
 
-  //! @param digit0 - first digit
-  //! @param digit1 - second digit
-  //! @param digit2 - third digit
-  //! @param digit3 - fourth digit
   //! @param doublepoint - show doublepoint or not
-  void setSegments(const bool doublepoint, const uint8_t firstDigit=0, const uint8_t secondDigit=0,
-                   const uint8_t thirdDigit=0, const uint8_t forthDigit=0);
+  void setSegments(const bool doublepoint, const uint8_t firstDigit = 0, const uint8_t secondDigit = 0,
+                   const uint8_t thirdDigit = 0, const uint8_t forthDigit = 0);
 
 private:
-  uint8_t _digit[5]={0,0,0,0,0};
-  uint8_t letter[4];
-  uint8_t textLength;
-  uint8_t counter1;
-  unsigned long prevTime = 0;
-
-  uint16_t _speed;
-  uint8_t _text[5];
-
-  void _runningText();
+  uint8_t _digit[5] = {0, 0, 0, 0, 0};
 
   void _sendByte(uint8_t shiftByte);
 };

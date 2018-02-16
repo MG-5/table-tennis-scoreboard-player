@@ -1,9 +1,4 @@
-
 #include "A1001Display.h"
-
-#define MAX_VALUE 5 // HALLO -> 5
-
-#define DELAY 5
 
 void A1001Display::initDisplay()
 {
@@ -65,6 +60,8 @@ void A1001Display::startupSequence()
       }
     }
 	resetOnce();
+
+  // TODO: print HALLO
 }
 
 void A1001Display::update(uint8_t currentDigit)
@@ -176,61 +173,4 @@ void A1001Display::setSegments(const bool doublepoint, const uint8_t firstDigit,
   _digit[2] = thirdDigit;
   _digit[3] = forthDigit;
   _digit[4] = doublepoint;
-}
-
-void A1001Display::runningText(const uint8_t text[MAX_VALUE], uint16_t speed)
-{
-  for (int i = 0; i <= 5; i++)
-    _text[i] = text[i];
-
-  _speed = speed;
-  textLength = MAX_VALUE;
-  counter1 = 0;
-  textIsRunning = true;
-}
-
-void A1001Display::_runningText()
-{
-  if (counter1 < textLength)
-  {
-    letter[0] = letter[1];
-    letter[1] = letter[2];
-    letter[2] = letter[3];
-    letter[3] = _text[counter1];
-  }
-
-  else if (counter1 < textLength + 4)
-  {
-    letter[0] = letter[1];
-    letter[1] = letter[2];
-    letter[2] = letter[3];
-    letter[3] = 0;
-  }
-  else
-    textIsRunning = false;
-
-  setSegments(false, letter[0], letter[1], letter[2], letter[3]);
-  counter1++;
-}
-
-void A1001Display::tick(uint32_t now)
-{
-
-  // if(!true)
-  //{
-  // sendByte(0);
-  // sendByte(~0);
-
-  // SHIFT_PORT |= STORE;
-  // SHIFT_PORT &= ~STORE;
-
-  //_delay_ms(DELAY);
-
-  //}
-
-  if (textIsRunning && (now - prevTime) >= _speed)
-  {
-    prevTime = now;
-    _runningText();
-  }
 }
