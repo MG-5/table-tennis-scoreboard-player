@@ -13,53 +13,53 @@ void A1001Display::initDisplay()
 
 void A1001Display::startupSequence()
 {
-    uint8_t segment = 1;
-    const uint8_t timePassed = 125;
-    const uint8_t sequence[7] = {66, 67, 99, 115, 123, 127, 255};
-    uint32_t prevTime2 = millis();
-    uint8_t i = 0;
+  uint8_t segment = 1;
+  const uint8_t timePassed = 125;
+  const uint8_t sequence[7] = {66, 67, 99, 115, 123, 127, 255};
+  uint32_t prevTime2 = millis();
+  uint8_t i = 0;
 
-    while (i <= 6)
+  while (i <= 6)
+  {
+    setSegments(false, segment);
+
+    updateAllDigits();
+    _delay_us(100);
+
+    turnOffDigits();
+    _delay_us(300);
+
+    if (millis() - prevTime2 >= timePassed)
     {
+      segment <<= 1;
+      i++;
+      prevTime2 = millis();
+    }
+  }
+
+  i = 0;
+  while (i <= 6)
+  {
+    segment = sequence[i];
+
+    if (i == 6)
+      setSegments(true, segment);
+    else
       setSegments(false, segment);
 
-      updateAllDigits();
-      _delay_us(100);
+    updateAllDigits();
+    _delay_us(100);
 
-	  turnOffDigits();
-	  _delay_us(300);
+    turnOffDigits();
+    _delay_us(300);
 
-      if (millis() - prevTime2 >= timePassed)
-      {
-        segment <<= 1;
-        i++;
-        prevTime2 = millis();
-      }
-    }
-
-	i=0;
-    while (i <= 6)
+    if (millis() - prevTime2 >= timePassed)
     {
-      segment = sequence[i];
-
-      if (i == 6)
-        setSegments(true, segment);
-      else
-        setSegments(false, segment);
-
-      updateAllDigits();
-      _delay_us(100);
-
-      turnOffDigits();
-      _delay_us(300);
-
-      if (millis() - prevTime2 >= timePassed)
-      {
-        i++;
-        prevTime2 = millis();
-      }
+      i++;
+      prevTime2 = millis();
     }
-	resetOnce();
+  }
+  resetOnce();
 
   // TODO: print HALLO
 }
