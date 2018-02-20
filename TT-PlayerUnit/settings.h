@@ -4,6 +4,7 @@
 #define UART_BAUD 921600
 
 // DISPLAY
+#define DIGIT_DDR DDRB
 #define DIGIT_PORT PORTB // 0-4
 #define STORE_PORT PORTD
 

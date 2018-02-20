@@ -9,6 +9,8 @@ void A1001Display::initDisplay()
   DDRD |= (STORE | MASTER_RESET);
   PORTB &= ~(DATA | CLOCK);
   PORTD &= ~(STORE | MASTER_RESET);
+  DIGIT_DDR |= (0b11111); // 4 Digits + DP
+  turnOffDigits();
 }
 
 void A1001Display::startupSequence()
@@ -27,7 +29,7 @@ void A1001Display::startupSequence()
     _delay_us(100);
 
     turnOffDigits();
-    _delay_us(300);
+    _delay_us(200);
 
     if (millis() - prevTime2 >= timePassed)
     {
@@ -51,7 +53,7 @@ void A1001Display::startupSequence()
     _delay_us(100);
 
     turnOffDigits();
-    _delay_us(300);
+    _delay_us(200);
 
     if (millis() - prevTime2 >= timePassed)
     {
@@ -59,19 +61,59 @@ void A1001Display::startupSequence()
       prevTime2 = millis();
     }
   }
-  resetOnce();
+  _delay_ms(100);
 
-  // TODO: print HALLO
+  // print running "HALLO"
+  setSegments(false);
+  const uint8_t hallo[] = {118, 119, 56, 56, 63};
+  // const uint8_t hallo[] = {64, 0, 0, 0, 0};
+  const uint8_t halLength = 5;
+  uint8_t idxHal = 0;
+  bool running = true;
+  prevTime2 = millis();
+
+  while (running)
+  {
+    if (millis() - prevTime2 >= timePassed * 2)
+    {
+      _digit[0] = _digit[1];
+      _digit[1] = _digit[2];
+      _digit[2] = _digit[3];
+
+      if (idxHal < halLength)
+        _digit[3] = hallo[idxHal];
+
+      else if (idxHal < halLength + 4)
+        _digit[3] = 0;
+
+      else
+        running = false;
+
+      prevTime2 = millis();
+      idxHal++;
+    }
+
+    for (uint8_t i = 0; i <= 3; i++)
+    {
+      update(i);
+      _delay_us(100);
+    }
+    turnOffDigits();
+  }
+  setSegments(false);
+  resetOnce();
 }
 
 void A1001Display::update(uint8_t currentDigit)
 {
-  // currentDigit is binary
   turnOffDigits();
 
   STORE_PORT &= ~STORE;
   _sendByte(_digit[currentDigit]);
   STORE_PORT |= STORE;
+  STORE_PORT &= ~STORE;
+
+  _delay_us(10); // source driver maybe to slow so we wait a time
 
   uint8_t reg = (1 << currentDigit);
 
@@ -85,12 +127,12 @@ void A1001Display::update(uint8_t currentDigit)
 
 void A1001Display::updateAllDigits()
 {
-  // currentDigit is binary
   turnOffDigits();
 
   STORE_PORT &= ~STORE;
   _sendByte(_digit[0]);
   STORE_PORT |= STORE;
+  STORE_PORT &= ~STORE;
 
   uint8_t reg = 0b1111;
 
@@ -110,7 +152,7 @@ void A1001Display::resetOnce()
 
 void A1001Display::turnOffDigits()
 {
-  DIGIT_PORT &= 0b00000; // alle 4 digits + DP abschalten
+  DIGIT_PORT &= ~(0b11111); // alle 4 digits + DP abschalten
 }
 
 void A1001Display::_sendByte(uint8_t shiftByte)

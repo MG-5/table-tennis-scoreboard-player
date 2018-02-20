@@ -32,17 +32,17 @@ int main(void)
 
     */
 
-    score_myself = 21;
-    score_other = 19;
+    score_myself = 9;
+    score_other = 14;
 
-    // display.showScoreline(score_myself, score_other);
+   display.showScoreline(score_myself, score_other);
 
-    display.setSegments(false, 0, 0, 0, 0);
+    //display.setSegments(false, 0, digitToSegment[2], 0, digitToSegment[5]);
 
     for (uint8_t i = 0; i <= 3; i++)
     {
       display.update(i);
-      _delay_us(100);
+      _delay_us(150);
     }
 
     display.turnOffDigits();
