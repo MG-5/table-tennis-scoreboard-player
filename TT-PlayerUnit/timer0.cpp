@@ -7,12 +7,12 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
-#ifdef defined(__AVR_ATmega328P__)
+#if defined(__AVR_ATmega328P__)
 #define TIMER0_CONTROLB TCCR0B
 #define TIMER0_REGISTER TCNT0
 #define TIMER0_IMR TIMSK0
 
-#elif defined(__AVR_ATtiny4313__)
+#elif defined(__AVR_ATtiny4313__) || defined(__AVR_ATtiny1634__)
 #define TIMER0_CONTROLB TCCR0B
 #define TIMER0_REGISTER TCNT0
 #define TIMER0_IMR TIMSK
