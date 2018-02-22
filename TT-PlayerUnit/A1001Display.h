@@ -4,7 +4,7 @@
 #include "timer0.h"
 #include <avr/io.h>
 #include <stdint.h>
-#include <util/delay.h>
+#include "utils.h"
 
 //      A
 //     ---

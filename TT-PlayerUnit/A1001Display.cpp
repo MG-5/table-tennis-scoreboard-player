@@ -26,10 +26,10 @@ void A1001Display::startupSequence()
     setSegments(false, segment);
 
     updateAllDigits();
-    _delay_us(100);
+    wait_us(100);
 
     turnOffDigits();
-    _delay_us(200);
+    wait_us(200);
 
     if (millis() - prevTime2 >= timePassed)
     {
@@ -50,10 +50,10 @@ void A1001Display::startupSequence()
       setSegments(false, segment);
 
     updateAllDigits();
-    _delay_us(100);
+    wait_us(100);
 
     turnOffDigits();
-    _delay_us(200);
+    wait_us(200);
 
     if (millis() - prevTime2 >= timePassed)
     {
@@ -61,7 +61,7 @@ void A1001Display::startupSequence()
       prevTime2 = millis();
     }
   }
-  _delay_ms(100);
+  wait_ms(100);
 
   // print running "HALLO"
   setSegments(false);
@@ -96,7 +96,7 @@ void A1001Display::startupSequence()
     for (uint8_t i = 0; i <= 3; i++)
     {
       update(i);
-      _delay_us(100);
+     wait_us(100);
     }
     turnOffDigits();
   }
@@ -113,7 +113,7 @@ void A1001Display::update(uint8_t currentDigit)
   STORE_PORT |= STORE;
   STORE_PORT &= ~STORE;
 
-  _delay_us(10); // source driver maybe to slow so we wait a time
+  wait_us(10); // source driver maybe to slow so we wait a time
 
   uint8_t reg = (1 << currentDigit);
 
