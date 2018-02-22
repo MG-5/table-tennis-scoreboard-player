@@ -1,27 +1,11 @@
 /*************************************************************************
 Title:    Interrupt UART library with receive/transmit circular buffers
 Author:   Peter Fleury <pfleury@gmx.ch>   http://tinyurl.com/peterfleury
-File:     $Id: uart.c,v 1.15.2.4 2015/09/05 18:33:32 peter Exp $
-Software: AVR-GCC 4.x
-Hardware: any AVR with built-in UART,
-License:  GNU General Public License
-          
 DESCRIPTION:
     An interrupt is generated when the UART has finished transmitting or
     receiving a byte. The interrupt handling routines use circular buffers
     for buffering received and transmitted data.
-    
-    The UART_RX_BUFFER_SIZE and UART_TX_BUFFER_SIZE variables define
-    the buffer size in bytes. Note that these variables must be a
-    power of 2.
-    
-USAGE:
-    Refere to the header file uart.h for a description of the routines.
-    See also example test_uart.c.
 
-NOTES:
-    Based on Atmel Application Note AVR306
-                    
 LICENSE:
     Copyright (C) 2015 Peter Fleury, GNU General Public License Version 3
 
@@ -34,7 +18,7 @@ LICENSE:
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-                        
+
 *************************************************************************/
 #include "uart.h"
 #include <avr/interrupt.h>
@@ -42,9 +26,7 @@ LICENSE:
 #include <avr/pgmspace.h>
 #include <stdlib.h>
 
-/*
- *  constants and macros
- */
+/* constants and macros */
 
 /* size of RX/TX buffers */
 #define UART_RX_BUFFER_MASK (UART_RX_BUFFER_SIZE - 1)
@@ -57,7 +39,7 @@ LICENSE:
 #error TX buffer size is not a power of 2
 #endif
 
-#if defined(__AVR_AT90S2313__) || defined(__AVR_AT90S4414__) || defined(__AVR_AT90S8515__) ||      \
+#if defined(__AVR_AT90S2313__) || defined(__AVR_AT90S4414__) || defined(__AVR_AT90S8515__) ||                          \
     defined(__AVR_AT90S4434__) || defined(__AVR_AT90S8535__) || defined(__AVR_ATmega103__)
 /* old AVR classic or ATmega103 with one UART */
 #define UART0_RECEIVE_INTERRUPT UART_RX_vect
@@ -101,8 +83,8 @@ LICENSE:
 #define UART0_BIT_TXEN TXEN
 #define UART0_BIT_UCSZ0 UCSZ0
 #define UART0_BIT_UCSZ1 UCSZ1
-#elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega8A__) || defined(__AVR_ATmega16__) ||        \
-    defined(__AVR_ATmega16A__) || defined(__AVR_ATmega32__) || defined(__AVR_ATmega32A__) ||       \
+#elif defined(__AVR_ATmega8__) || defined(__AVR_ATmega8A__) || defined(__AVR_ATmega16__) ||                            \
+    defined(__AVR_ATmega16A__) || defined(__AVR_ATmega32__) || defined(__AVR_ATmega32A__) ||                           \
     defined(__AVR_ATmega323__)
 /* ATmega with one USART */
 #define UART0_RECEIVE_INTERRUPT USART_RXC_vect
@@ -207,12 +189,12 @@ LICENSE:
 #define UART0_BIT_TXEN TXEN
 #define UART0_BIT_UCSZ0 UCSZ0
 #define UART0_BIT_UCSZ1 UCSZ1
-#elif defined(__AVR_ATmega48__) || defined(__AVR_ATmega48A__) || defined(__AVR_ATmega48P__) ||     \
-    defined(__AVR_ATmega48PA__) || defined(__AVR_ATmega48PB__) || defined(__AVR_ATmega88__) ||     \
-    defined(__AVR_ATmega88A__) || defined(__AVR_ATmega88P__) || defined(__AVR_ATmega88PA__) ||     \
-    defined(__AVR_ATmega88PB__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega168A__) ||    \
-    defined(__AVR_ATmega168P__) || defined(__AVR_ATmega168PA__) || defined(__AVR_ATmega168PB__) || \
-    defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega3250__) ||    \
+#elif defined(__AVR_ATmega48__) || defined(__AVR_ATmega48A__) || defined(__AVR_ATmega48P__) ||                         \
+    defined(__AVR_ATmega48PA__) || defined(__AVR_ATmega48PB__) || defined(__AVR_ATmega88__) ||                         \
+    defined(__AVR_ATmega88A__) || defined(__AVR_ATmega88P__) || defined(__AVR_ATmega88PA__) ||                         \
+    defined(__AVR_ATmega88PB__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega168A__) ||                        \
+    defined(__AVR_ATmega168P__) || defined(__AVR_ATmega168PA__) || defined(__AVR_ATmega168PB__) ||                     \
+    defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega3250__) ||                        \
     defined(__AVR_ATmega3290__) || defined(__AVR_ATmega6450__) || defined(__AVR_ATmega6490__)
 /* ATmega with one USART */
 #define UART0_RECEIVE_INTERRUPT USART_RX_vect
@@ -230,6 +212,8 @@ LICENSE:
 #define UART0_BIT_TXEN TXEN0
 #define UART0_BIT_UCSZ0 UCSZ00
 #define UART0_BIT_UCSZ1 UCSZ01
+#define UART0_BIT_PARITY0 UPM00
+#define UART0_BIT_PARITY1 UPM01
 #elif defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny2313A__) || defined(__AVR_ATtiny4313__)
 /* ATtiny with one USART */
 #define UART0_RECEIVE_INTERRUPT USART_RX_vect
@@ -247,17 +231,18 @@ LICENSE:
 #define UART0_BIT_TXEN TXEN
 #define UART0_BIT_UCSZ0 UCSZ0
 #define UART0_BIT_UCSZ1 UCSZ1
-#elif defined(__AVR_ATmega329__) || defined(__AVR_ATmega649__) || defined(__AVR_ATmega3290__) ||   \
-    defined(__AVR_ATmega6490__) || defined(__AVR_ATmega169A__) || defined(__AVR_ATmega169PA__) ||  \
-    defined(__AVR_ATmega329A__) || defined(__AVR_ATmega329PA__) || defined(__AVR_ATmega3290A__) || \
-    defined(__AVR_ATmega3290PA__) || defined(__AVR_ATmega649A__) || defined(__AVR_ATmega649P__) || \
-    defined(__AVR_ATmega6490A__) || defined(__AVR_ATmega6490P__) || defined(__AVR_ATmega165__) ||  \
-    defined(__AVR_ATmega325__) || defined(__AVR_ATmega645__) || defined(__AVR_ATmega3250__) ||     \
-    defined(__AVR_ATmega6450__) || defined(__AVR_ATmega165A__) || defined(__AVR_ATmega165PA__) ||  \
-    defined(__AVR_ATmega325A__) || defined(__AVR_ATmega325PA__) || defined(__AVR_ATmega3250A__) || \
-    defined(__AVR_ATmega3250PA__) || defined(__AVR_ATmega645A__) ||                                \
-    defined(__AVR_ATmega645PA__) || defined(__AVR_ATmega6450A__) ||                                \
-    defined(__AVR_ATmega6450PA__) || defined(__AVR_ATmega644__)
+#define UART0_BIT_PARITY0 UPM0
+#define UART0_BIT_PARITY1 UPM1
+#elif defined(__AVR_ATmega329__) || defined(__AVR_ATmega649__) || defined(__AVR_ATmega3290__) ||                       \
+    defined(__AVR_ATmega6490__) || defined(__AVR_ATmega169A__) || defined(__AVR_ATmega169PA__) ||                      \
+    defined(__AVR_ATmega329A__) || defined(__AVR_ATmega329PA__) || defined(__AVR_ATmega3290A__) ||                     \
+    defined(__AVR_ATmega3290PA__) || defined(__AVR_ATmega649A__) || defined(__AVR_ATmega649P__) ||                     \
+    defined(__AVR_ATmega6490A__) || defined(__AVR_ATmega6490P__) || defined(__AVR_ATmega165__) ||                      \
+    defined(__AVR_ATmega325__) || defined(__AVR_ATmega645__) || defined(__AVR_ATmega3250__) ||                         \
+    defined(__AVR_ATmega6450__) || defined(__AVR_ATmega165A__) || defined(__AVR_ATmega165PA__) ||                      \
+    defined(__AVR_ATmega325A__) || defined(__AVR_ATmega325PA__) || defined(__AVR_ATmega3250A__) ||                     \
+    defined(__AVR_ATmega3250PA__) || defined(__AVR_ATmega645A__) || defined(__AVR_ATmega645PA__) ||                    \
+    defined(__AVR_ATmega6450A__) || defined(__AVR_ATmega6450PA__) || defined(__AVR_ATmega644__)
 /* ATmega with one USART */
 #define UART0_RECEIVE_INTERRUPT USART0_RX_vect
 #define UART0_TRANSMIT_INTERRUPT USART0_UDRE_vect
@@ -274,12 +259,12 @@ LICENSE:
 #define UART0_BIT_TXEN TXEN0
 #define UART0_BIT_UCSZ0 UCSZ00
 #define UART0_BIT_UCSZ1 UCSZ01
-#elif defined(__AVR_ATmega64__) || defined(__AVR_ATmega128__) || defined(__AVR_ATmega128A__) ||    \
-    defined(__AVR_ATmega640__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__) ||    \
-    defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__) || defined(__AVR_ATmega164P__) ||   \
-    defined(__AVR_ATmega324P__) || defined(__AVR_ATmega644P__) || defined(__AVR_ATmega164A__) ||   \
-    defined(__AVR_ATmega164PA__) || defined(__AVR_ATmega324A__) || defined(__AVR_ATmega324PA__) || \
-    defined(__AVR_ATmega644A__) || defined(__AVR_ATmega644PA__) || defined(__AVR_ATmega1284__) ||  \
+#elif defined(__AVR_ATmega64__) || defined(__AVR_ATmega128__) || defined(__AVR_ATmega128A__) ||                        \
+    defined(__AVR_ATmega640__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__) ||                        \
+    defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__) || defined(__AVR_ATmega164P__) ||                       \
+    defined(__AVR_ATmega324P__) || defined(__AVR_ATmega644P__) || defined(__AVR_ATmega164A__) ||                       \
+    defined(__AVR_ATmega164PA__) || defined(__AVR_ATmega324A__) || defined(__AVR_ATmega324PA__) ||                     \
+    defined(__AVR_ATmega644A__) || defined(__AVR_ATmega644PA__) || defined(__AVR_ATmega1284__) ||                      \
     defined(__AVR_ATmega1284P__) || defined(__AVR_ATtiny1634__)
 /* ATmega with two USART */
 #define ATMEGA_USART1
@@ -300,6 +285,9 @@ LICENSE:
 #define UART0_BIT_TXEN TXEN0
 #define UART0_BIT_UCSZ0 UCSZ00
 #define UART0_BIT_UCSZ1 UCSZ01
+#define UART0_BIT_PARITY0 UPM00
+#define UART0_BIT_PARITY1 UPM01
+
 #define UART1_STATUS UCSR1A
 #define UART1_CONTROL UCSR1B
 #define UART1_CONTROLC UCSR1C
@@ -313,9 +301,12 @@ LICENSE:
 #define UART1_BIT_TXEN TXEN1
 #define UART1_BIT_UCSZ0 UCSZ10
 #define UART1_BIT_UCSZ1 UCSZ11
-#elif defined(__AVR_ATmega8U2__) || defined(__AVR_ATmega16U2__) || defined(__AVR_ATmega32U2__) ||  \
-    defined(__AVR_ATmega16U4__) || defined(__AVR_ATmega32U4__) || defined(__AVR_AT90USB82__) ||    \
-    defined(__AVR_AT90USB162__) || defined(__AVR_AT90USB646__) || defined(__AVR_AT90USB1286__) ||  \
+#define UART1_BIT_PARITY0 UPM10
+#define UART1_BIT_PARITY1 UPM11
+
+#elif defined(__AVR_ATmega8U2__) || defined(__AVR_ATmega16U2__) || defined(__AVR_ATmega32U2__) ||                      \
+    defined(__AVR_ATmega16U4__) || defined(__AVR_ATmega32U4__) || defined(__AVR_AT90USB82__) ||                        \
+    defined(__AVR_AT90USB162__) || defined(__AVR_AT90USB646__) || defined(__AVR_AT90USB1286__) ||                      \
     defined(__AVR_AT90USB647__) || defined(__AVR_AT90USB1287__)
 #define UART0_RECEIVE_INTERRUPT USART1_RX_vect
 #define UART0_TRANSMIT_INTERRUPT USART1_UDRE_vect
@@ -469,12 +460,12 @@ void uart_init(unsigned int baudrate)
   /* Enable USART receiver and transmitter and receive complete interrupt */
   UART0_CONTROL = (1 << UART0_BIT_RXCIE) | (1 << UART0_BIT_RXEN) | (1 << UART0_BIT_TXEN);
 
-/* Set frame format: asynchronous, 8data, no parity, 1stop bit */
+/* Set frame format: asynchronous, 8data, even parity, 1stop bit */
 #ifdef UART0_CONTROLC
 #ifdef UART0_BIT_URSEL
-  UART0_CONTROLC = (1 << UART0_BIT_URSEL) | (1 << UART0_BIT_UCSZ1) | (1 << UART0_BIT_UCSZ0);
+  UART0_CONTROLC = (1 << UART0_BIT_URSEL) | (1 << UART0_BIT_UCSZ1) | (1 << UART0_BIT_UCSZ0) | (1 << UART0_BIT_PARITY1);
 #else
-  UART0_CONTROLC = (1 << UART0_BIT_UCSZ1) | (1 << UART0_BIT_UCSZ0);
+  UART0_CONTROLC = (1 << UART0_BIT_UCSZ1) | (1 << UART0_BIT_UCSZ0) | (1 << UART0_BIT_PARITY1);
 #endif
 #endif
 
@@ -552,22 +543,21 @@ void uart_puts(const char *s)
 
 void uart_putNewLine()
 {
-	uart_putc(13);
-	uart_putc(10);
+  uart_putc(13);
+  uart_putc(10);
 }
 
 void uart_putUInt16(uint16_t number)
 {
-	char s[1+(number/10)];
-	uart_puts(utoa( number, s, 10 ));
+  char s[1 + (number / 10)];
+  uart_puts(utoa(number, s, 10));
 }
 
 void uart_putUInt32(uint32_t number)
 {
-	char s[1+(number/10)];
-	uart_puts(ultoa( number, s, 10 ));
+  char s[1 + (number / 10)];
+  uart_puts(ultoa(number, s, 10));
 }
-
 
 /*************************************************************************
 Function: uart_puts_p()
@@ -691,11 +681,11 @@ void uart1_init(unsigned int baudrate)
   /* Enable USART receiver and transmitter and receive complete interrupt */
   UART1_CONTROL = (1 << UART1_BIT_RXCIE) | (1 << UART1_BIT_RXEN) | (1 << UART1_BIT_TXEN);
 
-/* Set frame format: asynchronous, 8data, no parity, 1stop bit */
+/* Set frame format: asynchronous, 8data, even parity, 1stop bit */
 #ifdef UART1_BIT_URSEL
-  UART1_CONTROLC = (1 << UART1_BIT_URSEL) | (1 << UART1_BIT_UCSZ1) | (1 << UART1_BIT_UCSZ0);
+  UART1_CONTROLC = (1 << UART1_BIT_URSEL) | (1 << UART1_BIT_UCSZ1) | (1 << UART1_BIT_UCSZ0) | (1 << UART1_BIT_PARITY1);
 #else
-  UART1_CONTROLC = (1 << UART1_BIT_UCSZ1) | (1 << UART1_BIT_UCSZ0);
+  UART1_CONTROLC = (1 << UART1_BIT_UCSZ1) | (1 << UART1_BIT_UCSZ0) | (1 << UART1_BIT_PARITY1);
 #endif
 
 } /* uart_init */
