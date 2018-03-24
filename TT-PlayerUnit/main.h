@@ -10,7 +10,4 @@
 #include "common/uart.h"
 #include "common/utils.h"
 
-uint8_t score_myself = 0;
-uint8_t score_other = 0;
-
-void checkNewInfos();
+bool checkNewInfos();

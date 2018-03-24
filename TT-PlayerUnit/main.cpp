@@ -1,7 +1,8 @@
 #include "main.h"
 
 A1001Display display;
-bool test = false;
+uint32_t prevTime = 0;
+uint32_t prevTime2 = 0;
 
 int main(void)
 {
@@ -18,68 +19,59 @@ int main(void)
 
   while (true)
   {
-    checkNewInfos();
+    uint32_t now = millis();
+    if (checkNewInfos())
+      prevTime = now;
+
+    else if ((now - prevTime) >= 50)
+      display.setSegments(false, 64, 64, 64, 64);
 
     for (uint8_t i = 0; i <= 3; i++)
     {
       display.update(i);
       wait_us(150);
     }
+
     display.turnOffDigits();
     //_delay_us(100);
   }
 }
 
-void checkNewInfos()
+bool checkNewInfos()
 {
   uint8_t digits[5];
 
   unsigned int c = uart_getc();
 
   if (c & UART_NO_DATA)
-    return; // no new infos available
+    return false; // no new infos available
 
-  while (!(c & UART_NO_DATA))
+  do
   {
     if (c == 0x42)
     {
       // new packet arrived - 5 bytes will incoming
-      uint8_t count = 0;
-      bool noError = true;
-
-      while (noError && count < 5)
+      for (uint8_t count = 0; count < 5; count++)
       {
         c = uart_getc();
 
         if ((c & UART_NO_DATA) || (c & UART_FRAME_ERROR) || (c & UART_PARITY_ERROR))
         {
-          // reject packets
-          noError = false;
-          break;
+          // reject packets by deleting the ring buffer completely
+          uart_clearBuffer();
+          return false;
         }
         digits[count] = c;
-        count++;
       }
 
-      if (noError)
-        display.setSegments(digits[4], digits[0], digits[1], digits[2], digits[3]);
-
-      else
-      {
-        while (!noError)
-        {
-          // delete buffer completely
-          c = uart_getc();
-          while (!(c & UART_NO_DATA))
-          {
-            c = uart_getc();
-          }
-          noError = true;
-        }
-      }
+      display.setSegments(digits[4], digits[0], digits[1], digits[2], digits[3]);
+      return true;
     }
     else
       // not equal to start - reject frame
       c = uart_getc();
-  }
+
+  } while (!(c & UART_NO_DATA));
+
+  return false;
 }
