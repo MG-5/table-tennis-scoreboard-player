@@ -1,7 +1,6 @@
 #pragma once
 
-#define PLAYERONE 1
-#define UART_BAUD 921600
+#define UART_BAUD 1000000UL
 
 // DISPLAY
 #define DIGIT_DDR DDRB
