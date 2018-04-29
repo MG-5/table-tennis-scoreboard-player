@@ -12,3 +12,7 @@
 #define CLOCK (1 << PB7) // USCK
 #define MASTER_RESET (1 << PD6)
 #define DP_PIN (1 << PB4) // doubepoint
+
+#define START_FRAME 0x42
+#define RQ_CODE 0xC2
+#define ANSWER_CODE 0xCC

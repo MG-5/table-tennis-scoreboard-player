@@ -14,8 +14,8 @@ int main(void)
 
   sei();
 
-  display.startupSequence();
-  display.setSegments(false, 64, 64, 64, 64);
+  // display.startupSequence();
+  display.setSegments(false, 0, 0, 0, 0);
 
   while (true)
   {
@@ -48,7 +48,7 @@ bool checkNewInfos()
 
   do
   {
-    if (c == 0x42)
+    if (c == START_FRAME)
     {
       // new packet arrived - 5 bytes will incoming
       for (uint8_t count = 0; count < 5; count++)
@@ -65,8 +65,15 @@ bool checkNewInfos()
       }
 
       display.setSegments(digits[4], digits[0], digits[1], digits[2], digits[3]);
+      uart_putc(ANSWER_CODE);
       return true;
     }
+    else if (c == RQ_CODE)
+    {
+      uart_putc(ANSWER_CODE);
+      return true;
+    }
+
     else
       // not equal to start - reject frame
       c = uart_getc();
