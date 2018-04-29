@@ -5,7 +5,7 @@
 
 #include "settings.h"
 
-#include "common/A1001Display.h"
+#include "A1001Display.h"
 #include "common/timer0.h"
 #include "common/uart.h"
 #include "common/utils.h"

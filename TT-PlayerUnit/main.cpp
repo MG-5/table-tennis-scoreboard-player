@@ -14,7 +14,6 @@ int main(void)
 
   sei();
 
-  // display.startupSequence();
   display.setSegments(false, 0, 0, 0, 0);
 
   while (true)
